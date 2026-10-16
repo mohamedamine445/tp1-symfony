@@ -42,6 +42,39 @@ class ArticlesController extends AbstractController
             'article' => $article,
         ]);
     }
+    #[Route('/articles/{id}/modifier', name: 'app_article_modifier', requirements: ['id' => '\d+'])]
+    public function modifier(Article $article, Request $request, EntityManagerInterface $em): Response
+    {
+        $form = $this->createForm(ArticleType::class, $article);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $em->flush(); // no persist(): the entity is already managed by Doctrine
+
+            $this->addFlash('success', 'Article modifié avec succès !');
+
+            return $this->redirectToRoute('app_article_detail', ['id' => $article->getId()]);
+        }
+
+        return $this->render('articles/modifier.html.twig', [
+            'formulaire' => $form,
+            'article' => $article,
+        ]);
+    }
+    #[Route('/articles/{id}/supprimer', name: 'app_article_supprimer', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function supprimer(Article $article, Request $request, EntityManagerInterface $em): Response
+    {
+        if ($this->isCsrfTokenValid('supprimer_' . $article->getId(), $request->request->get('_token'))) {
+            $em->remove($article);
+            $em->flush();
+
+            $this->addFlash('success', 'Article supprimé avec succès.');
+        } else {
+            $this->addFlash('danger', 'Token CSRF invalide. Suppression annulée.');
+        }
+
+        return $this->redirectToRoute('app_articles');
+    }
     #[Route('/articles', name: 'app_articles')]
     public function index(ArticleRepository $articleRepository): Response
     {
