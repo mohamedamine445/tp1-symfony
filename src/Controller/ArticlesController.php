@@ -2,14 +2,16 @@
 
 namespace App\Controller;
 
+use App\Entity\Article;
+use App\Entity\Categorie;
+use App\Form\ArticleType;
+use App\Repository\ArticleRepository;
+use App\Repository\CategorieRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use App\Entity\Article;
-use Doctrine\ORM\EntityManagerInterface;
-use App\Repository\ArticleRepository;
-use App\Form\ArticleType;
-use Symfony\Component\HttpFoundation\Request;
 
 class ArticlesController extends AbstractController
 {
@@ -18,6 +20,15 @@ class ArticlesController extends AbstractController
     {
         $article = new Article();
         $article->setDateCreation(new \DateTime()); // default value, only for new articles
+
+        // Bonus: preselect the category if ?categorie=ID is in the URL
+        $categorieId = $request->query->get('categorie');
+        if ($categorieId) {
+            $categorie = $em->getRepository(Categorie::class)->find($categorieId);
+            if ($categorie) {
+                $article->setCategorie($categorie);
+            }
+        }
 
         $form = $this->createForm(ArticleType::class, $article);
         $form->handleRequest($request);
@@ -35,6 +46,7 @@ class ArticlesController extends AbstractController
             'formulaire' => $form,
         ]);
     }
+
     #[Route('/articles/{id}', name: 'app_article_detail', requirements: ['id' => '\d+'])]
     public function detail(Article $article): Response
     {
@@ -42,6 +54,7 @@ class ArticlesController extends AbstractController
             'article' => $article,
         ]);
     }
+
     #[Route('/articles/{id}/modifier', name: 'app_article_modifier', requirements: ['id' => '\d+'])]
     public function modifier(Article $article, Request $request, EntityManagerInterface $em): Response
     {
@@ -61,6 +74,7 @@ class ArticlesController extends AbstractController
             'article' => $article,
         ]);
     }
+
     #[Route('/articles/{id}/supprimer', name: 'app_article_supprimer', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function supprimer(Article $article, Request $request, EntityManagerInterface $em): Response
     {
@@ -75,13 +89,24 @@ class ArticlesController extends AbstractController
 
         return $this->redirectToRoute('app_articles');
     }
+
     #[Route('/articles', name: 'app_articles')]
-    public function index(ArticleRepository $articleRepository): Response
-    {
-        $articles = $articleRepository->findAll();
+    public function index(
+        Request $request,
+        ArticleRepository $articleRepository,
+        CategorieRepository $categorieRepository
+    ): Response {
+        // Bonus: filter by category with ?categorie=ID
+        $categorieId = $request->query->get('categorie');
+
+        $articles = $categorieId
+            ? $articleRepository->findBy(['categorie' => $categorieId])
+            : $articleRepository->findAll();
 
         return $this->render('articles/index.html.twig', [
             'articles' => $articles,
+            'categories' => $categorieRepository->findAll(),
+            'categorieActive' => $categorieId,
         ]);
     }
 }
