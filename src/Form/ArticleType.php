@@ -11,6 +11,8 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use App\Entity\Categorie;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 
 class ArticleType extends AbstractType
 {
@@ -38,6 +40,15 @@ class ArticleType extends AbstractType
                     'placeholder' => 'Nom de l\'auteur',
                     'class' => 'form-control',
                 ],
+            ])
+            
+            ->add('categorie', EntityType::class, [
+                'class' => Categorie::class,
+                'choice_label' => 'nom',
+                'label' => 'Catégorie',
+                'placeholder' => '-- Choisir une catégorie --',
+                'required' => false,
+                'attr' => ['class' => 'form-select'],
             ])
             ->add('dateCreation', DateTimeType::class, [
                 'label' => 'Date de création',
